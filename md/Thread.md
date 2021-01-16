@@ -234,3 +234,211 @@ void uncaughtException(Thread t, Throwable e); //처리되지 않은 예외에 �
 
 
 ![Thread02](.\img\Thread02.png)
+
+
+
+### Daemon Thread
+
+- 일반 쓰레드(non-daemon thread)의 작업을 돕는 보조적인 역할을 수행
+
+- 일반 쓰레드가 모두 종료되면 자동적으로 종료된다.
+- 가비지 컬렉터, 자동저장, 화면 자동갱신 등에 사용된다.
+- 무한루프와 조건문을 이용해서 실행 후 대기하다가 특정조건이 만족되면 작업을 수행하고 다시 대기하도록 작성한다.
+
+``` java
+public void run() {
+    while(true) {
+        try {
+            Thread.sleep(3 * 1000); //3초마다
+        } catch(InterruptedException e) {}
+        
+        // autoSave 의 값이 true이면 autoSave()를 호출한다.
+        if(autoSave) {
+            autoSave();
+        }
+    }
+}
+```
+
+``` java
+boolean isDaemon(boolean on); //쓰레드가 데몬 쓰레드인지 확인한다. 데몬이면 true
+void setDaemon(boolean on); //쓰레드를 데몬 쓰레드로 또는 사용자 쓰레드로 변경 매개변수 on을 true로 지정하면 데몬 쓰레드가 된다.
+```
+
+* setDaemon()은 반드시 start()를 호출하기 전에 실행되어야 한다. 그렇지 않으면 IllegalThreadStateException이 발생한다.
+
+
+
+
+
+### 쓰레드의 상태
+
+![Thread03](./img/Thread03.png)
+
+
+
+1. 쓰레드가 처음 생성되면 new 상태가 되고, start() 메소드가 실행되기 전 까지 대기한다.
+2. start() 메소드가 실행되면 RUNNABLE 상태가 되고 저렇게 Queue 같이 생긴곳에 들어간다.
+3. 자기 차례가 오면 실행을 하는데 4번 메소드에 있는 친구들을 만나면 일시정지상태가 된다.
+4. 일시정지 상태에서 5번 친구들의 메소드를 만나면, 다시 yield() 메소드의 Queue에 들어간다.
+5. 이 과정은 stop() 메소드를 만나기 전 까지 계속 실행되고, 다 마치면 소멸(TERMINATER)하게 된다.
+
+
+
+### 쓰레드의 실행제어
+
+- 쓰레드의 실행을 제어할 수 있는 메소드가 제공된다.
+
+``` java
+//지정된 시간(천분의 일초 단위)동안 쓰레드를 일시정지시킨다. 지정한 시간이 지나고 나면, 자동적으로 다시 실행대기상태가 된다.
+static void sleep(long millis);
+static void sleep(long millis, int nanos);
+
+//지정된 시간동안 쓰레드가 실행되도록 한다. 지정된 시간이 지나거나 작업이 종료되면 join()을 호출한 쓰레드로 다시 돌아와 실행을 계속한다.
+void join();
+void join(long millis);
+void join(long millis, int nanos);
+
+//sleep()이나 join()에 의해 일시정지상태인 쓰레드를 깨워서 실행대기상태로 만든다. 해당 쓰레드에서는 Interrupted Exception이 발생함으로써 일시정지 상태를 벗어나게 된다.
+void interrupt();
+
+//쓰레드를 즉시 종료시킨다.
+void stop();
+
+//쓰레드를 일시정지시킨다. resume()을 호출하면 다시 실행대기상태가 된다.
+void suspend();
+
+//suspend()에 의해 일시정지상태에 있는 쓰레드를 실행대기상태로 만든다.
+void resume();
+
+//실행 중에 자신에게 주어진 실행시간을 다른 쓰레드에게 양보하고 자신은 실행대기상태가 된다.
+static void yield();
+```
+
+static 메소드는 쓰레드 자기 자신에게만 호출 가능하다.
+
+
+
+
+
+### sleep()
+
+- 현재 쓰레드를 지정된 시간동안 멈추게 한다.
+
+``` java
+static void sleep (long millis); // 10^-3초 단위
+static void sleep (long millis, int nanos) // 10^-3초 + 10^-9초
+```
+
+
+
+- 반드시 예외처리를 해야 한다.(자다가 InterruptedException 이 발생하면 깨어남)
+
+``` java
+try {
+    Thread.sleep(1, 500000); // (0.001 + 0.0005 = 0.0015초 동안 잠)
+} catch (InterruptedException e) {}
+
+//위에 코드를 하나의 메소드로 묶어서 정리하면 더편리함
+void delay(int millis) {
+    try {
+        Thread.sleep(millis);
+    } catch (InterruptedException e) {}
+}
+```
+
+
+
+- 특정 쓰레드를 지정해서 멈추게 하는 것은 불가능하다.
+
+### interrupt()
+
+- 대기상태(WAITING)인 쓰레드를 실행대기 상태(RUNNABLE)로 만든다.
+
+``` java
+void interrupt(); // 쓰레드의 interrupted상태를 false에서 true로 변경.
+boolean isInterrupted(); // 쓰레드의 interrupted 상태를 반환.
+static boolean interrupted(); // 현재 쓰레드의 interrupted상태를 알려주고,false로 초기화. 
+
+
+public static void main(String[] args) {
+	Thread t1 = new Thread(new Runnable(){
+        @Override
+        public void run() {
+            try {
+                while(true) {
+                    System.out.println("실행중");
+                    Thread.sleep(200);
+                }
+            } catch(InterruptedException e) {
+                
+            }
+            
+            System.out.println("자원 정리");
+            System.out.println("실행 종료");
+        }
+    });
+    
+    t1.start();
+    
+    try {
+        Thread.sleep(2*1000);
+    } catch(InterruptedException e) {
+        
+    }
+    t1.interrupt();
+    
+}
+```
+
+- 이런식의 코드가 있다면, t1 쓰레드가 새로운 콜 스택에 담기고, t1쓰레드가 실행되며, 동시에 main 쓰레드는 2초간 기다린 뒤, t1쓰레드에 interrupt() 메소드를 통해 WAITING 상태인 t1쓰레드를 RUNNABLE 상태로 깨우게 된다.  어떻게? throw new InterruptException 해서 깨운다.  그럼 run() 메소드 내부에서 열심이 돌아가던 try ~ catch 문에서 InterruptException을 잡고, catch문에 아무것도 없으니까 *자원정리, 실행종료*  가 실행되는 것 이다. while문은 당연히 exception이 발생했으니 사라지게 된다. 만약 while 문 안에서 try 문을 실행했다면, interrupt 해도 계속 실행될 것 이다.
+- 또한 interrupt() 메소드가 호출되면 해당 쓰레드는 isInterrupt() 메소드를 호출할 시 true를 반환하게 되어있다.  static interrupted() 메소드는 isInterrupt()를 반환하고, false로 바꾼다.
+- 쓰레드가 일시 정지 상태가 되지 않는다면, interrupt() 메소드를 호출하는건 아무 의미가 없다. 즉 run() 메소드 내부의 sleep()  메소드가 없다면, 의미가 없다. 하지만 위의 isInterrupt(), interrupted() 메소드를 통해 일시정지 상태를 만들지 않고도, 컨트롤 가능하다.
+
+### suspend(), stop(), resume()
+
+- 실행중인 쓰레드(RUNNABLE)를 대기상태(WAITING)으로 만들거나, 그 반대, 혹은 완전 종료시키는 메소드이다.
+- 데드락을 발생시키므로, deprecated 애너테이션이 붙었으며, 쓰면 안된다.
+- 따라서 따로 오버라이딩 해서 써야 한다.
+
+``` java
+class MyThread implements Runnable {
+    volatile boolean suspended = false;
+    volatile boolean stopped = false;
+    
+    Thread th;
+    
+    MyThread(String name) {
+        th = new Thread(this, name);
+    }
+    
+    void start() {
+        th.start();
+    }
+    
+    @Override
+    public void run() {
+        //작업
+    }
+    
+    void suspend() {
+        suspended = true;
+    }
+    void resume() {
+        suspended = false;
+    }
+    void stop() {
+        stopped = true;
+    }
+    
+}
+```
+
+- volatile :  자주 바뀌는 변수 앞에 선언해 준다.
+
+  변수들은 RAM의 메모리상에 상주하고, 자주 쓰이는 변수들은 더 빠르게 캐치하기 위해, CPU 코어의 Cache Memory에 상주하게 될 텐데 이 때 CPU의 Cache Memory에 저장된 변수들은 실제 값이 아니라 RAM 에서 그 값들을 복사한 복사본 들을 가지고 있는다. 이 때문에, CPU의 Cache Memory의 변수의 값과, 실제 메모리의 값이 다를 수 있는데, volatile 키워드를 붙여준다면 CPU의 Cache Memory에 복사본을 저장하지 않는다. 결과적으로 항상 일정한 값을 가지게 된다.
+
+  (더 공부가 필요할듯)
+
+
+
