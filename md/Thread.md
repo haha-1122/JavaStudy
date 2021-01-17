@@ -124,7 +124,7 @@ class MyThread extends Thread {
 
 
 
-![Thread01](.\img\Thread01.png)
+![Thread01](./img/Thread01.png)
 
 main 메소드에서 쓰레드를 실행했을 때 의 과정이다.
 
@@ -233,7 +233,7 @@ void uncaughtException(Thread t, Throwable e); //처리되지 않은 예외에 �
 
 
 
-![Thread02](.\img\Thread02.png)
+![Thread02](./img/Thread02.png)
 
 
 
