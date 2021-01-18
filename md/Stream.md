@@ -198,7 +198,68 @@ int total = stream.count(); // 요소 개수 세기 (반환값이 Stream이 아�
   long count = emptyStream.count(); // count의 값은 0이 나옴
   ```
 
-  
+
+
+
+## 스트림의 연산 메소드들
+
+-   중간연산 (0 ~ n번 수행 가능)
+
+    ```java
+    Stream<T> distinct() // 중복을 제거
+    Stream<T> filter(Predicate<T> predicate) // 필터링
+    Stream<T> limit(long maxSize) // 스트림의 일부를 잘라냄
+    Stream<T> skip(long n) // 스트림의 일부를 건너뜀
+    Stream<T> peek(Consumer<T> action) // 스트림의 요소에 작업수행
+    Stream<T> sorted()
+    Stream<T> sorted(Comparator<T> comparator) // 스트림의 요소를 정렬
+        
+      	// 스트림의 요소를 변환
+    Stream<R> map(Function<T, R> mapper)
+    DoubleStream mapToDouble(ToDoubleFunction<T> mapper)
+    IntStream mapToInt(ToIntFunction<T> mapper)
+    LongStream mapToLong(ToLongFUnction<T> mapper)
+    
+    Stream<R> flatMap(Function<T, R> mapper)
+    DoubleStream flatMapToDouble(ToDoubleFunction<T> mapper)
+    IntStream flatMapToInt(ToIntFunction<T> mapper)
+    LongStream flatMapToLong(ToLongFUnction<T> mapper)
+    ```
+
+    
+
+-   최종연산 (0 ~ 1번 수행 가능)
+
+    ``` java
+    void forEach(Consumer<? super T> action) // 각 요소에 지정된 작업 수행
+    void forEachOrdered(Consumer<? super T> action) // 순서유지. 병렬스트림처리할 때 사용
+        
+    long count() // 스트림의 요소의 개수 반환
+    
+    Optional<T> max(Comparator<? super T> comparator) // 스트림의 최대값/최소값을 반환
+    Optional<T> min(Comparator<? super T> comparator)
+        
+    Optional<T> findAny() // 아무거나 하나를 반환
+    Optional<T> findFirst() // 첫 번째 요소를 반환
+        
+    boolean allMatch(Predicate<T> p) // 모두 만족하는지 확인
+    boolean anyMatch(Predicate<T> p) // 하나라도 만족하는지
+    boolean noneMatch(Predicate<T> p) // 모두 만족하지 않았는지
+        
+    Object[] toArray()
+    A[] toArray(IntFunction<A[]> generator) // 스트림의 모든 요소를 배열로 반환
+        
+        // 스트림의 요소를 하나씩 줄여가면서(리듀싱) 계산한다
+    Optional<T> reduce(BinaryOperator<T> accumulator)
+    T reduce(T identity, BinaryOperator<T> accumulator)
+    U reduce(U identity, BiFunction<U, T, U> accumulator, BinaryOperator<U> combiner)
+        
+        // 스트림의 요소를 수집한다. 주로 요소를 그룹화하거나 분할한 결과를 컬렉션에 담아 반환하는데 사용된다.
+    R collect(Collector<T, A, R> collector)
+    R collect(Supplier<R> supplier, BiConsumer<R, T> accumulator, BiConsumer<R,R> combiner) 
+    ```
+
+    
 
 ## 스트림의 중간연산
 
@@ -210,12 +271,20 @@ int total = stream.count(); // 요소 개수 세기 (반환값이 Stream이 아�
   
   ```
 
+
+
+
+
 - 스트림의 요소 걸러내기 -filter(), distinct()
 
   ``` java
   Stream<T> filter(Predicate<? super T> predicate) // 조건에 맞지 않는 요소 제거
   Stream<T> distinct() // 중복제거
   ```
+
+
+
+
 
 - 스트림 정렬하기 -sorted()
 
@@ -235,4 +304,137 @@ int total = stream.count(); // 요소 개수 세기 (반환값이 Stream이 아�
   // 이 밖에 재밌는 기능 많음
   ```
 
-  
+
+
+
+
+
+- Comparator의 comparing()메소드로 정렬 기준을 제공
+
+    ``` java
+    Comparator<T> comparing(Function<T, U> keyExtractor)
+    Comparator<T> comparing(Function<T, U> keyExtractor, Comparator<U> keyComparator)
+    ```
+
+    ``` java
+    studentStream.sorted(Comparator.comparing(Student::getBan)) // 반별로 정렬
+        .forEach(System.out::println);
+    ```
+
+    ``` java
+    public static <T, U extends Comparable<? super U>> Comparator<T> comparing(
+                Function<? super T, ? extends U> keyExtractor)
+        {
+            Objects.requireNonNull(keyExtractor);
+            return (Comparator<T> & Serializable)
+                (c1, c2) -> keyExtractor.apply(c1).compareTo(keyExtractor.apply(c2));
+        } // 이렇게생겨먹었는데
+    /* 파라미터로 Function 인터페이스 만족시키는 람다 들어오면 그냥 그거갖고*/
+    (c1, c2) -> keyExtractor.apply(c1).compareTo(keyExtractor.apply(c2));
+    /*다시 이 람다식을 반환 때려서*/
+    new Comparator<T>(){
+    	@Override
+        public int compare(T t1, T t2) {
+            return keyExtractor.apply(t1).compareTo(keyExtractor.apply(t2));
+        }
+    } // 이런식으로 해주는듯 하다.
+    ```
+
+    1.  Function 인터페이스 람다 파라미터로 받음
+
+    2.  return (c1, c2) -> f.apply(c1).compareTo(f.apply(c2))
+
+    3.  new Comparator<>(){@Override}
+
+    4.  sorted(new Comparator<>(){@Override})
+
+    5.  아래건 위에꺼 좀 더 풀어쓴 느낌임
+
+    6.  ``` java
+        comparing(Student::getBan, (x,y) -> x.compareTo(y))
+        ```
+
+
+
+
+
+- 추가 정렬 기준을 제공할 떄는 thenComparing()을 사용
+
+    ``` java
+    thenComparing(Comparator<T> other)
+    thenComparing(Function<T, U> keyExtractor)
+    thenComparing(Function<T, U> keyExtractor, Comparator<U> keyComp)
+    ```
+
+    ``` java
+    studentStream.sorted(Comparator.comparing(Student::getBan) //반별로 정렬
+                        .thenComparing(Student::getTotalScore) // 총점별로 정렬
+                        .thenComparing(Student:getName)) // 이름별로 정렬
+        				.forEach(System.out::println);
+    ```
+
+
+
+
+
+-   스트림의 요소 변환 - map()
+
+    ``` java
+    Stream<R> map(Function<? super T, ? extends R> mapper) // Stream<T> -> Stream<R>
+    ```
+
+    ``` java
+    Stream<File> fileStream = Stream.of(new File("EX1.java"),
+                                        new File("Ex1"),
+                                        new File("Ex1.bak"),
+                                        new File("Ex1.txt"));
+    Stream<String> filenameStream = fileStream.map(File::getName);
+    filenameStream.forEach(System.out::println); // 스트림의 모든 파일 이름 출력
+    ```
+
+    map을 이용해 기존의 스트림의 요소를 변환해 새로운 스트림으로 반환해 준다. mapping의 그 맵이다.
+
+
+
+
+
+-   스트림의 요소를 소비하지 않고 엿보기 - peek()
+
+    ``` java
+    Stream<T> peek(Consumer<? super T> action) // 중간 연산(스트림을 소비x)
+    void forEach(Consumer<? super T> action) // 최종 연산(스트림을 소비o)
+    ```
+
+    peek(System.out::println)이 Stream으로 반환하기 때문에 최종연산이 아님 따라서 계속 Stream을 사용할 수 있다
+
+
+
+
+
+-   스트림의 스트림을 스트림으로 변환 - flatMap()
+
+    ``` java
+    Stream<String[]> strArrStrm = Stream.of(new String[]{"abc","def","ghi"},
+                                            new String[]{"ABC","DEF","GHI"});
+    ```
+
+    ``` java
+    Stream<Stream<String>> strStrStrm = strArrStrm.map(Arrays::stream);
+    ```
+
+    위와 같이 한다면
+
+    1.  strArrStrm에 두개의 String[]배열을 가진 Stream의 주소값이 저장됨.
+
+    2.  strStrStrm에 두개의 Stream<String>을 가진 스트림의 스트림의 주소값이 저장됨.
+
+        (위는 String[]을 가진 Stream, 아래는 Stream<String>을 가진 Stream)
+
+    3.  따라서 저렇게 하면 두개의 배열을 하나로 합친것 처럼 사용할 수 없음.
+
+    ``` java
+    Stream<String> strStrStrm = strArrStrm.flatMap(Arrays:stream); // Arrays.stream(T[])
+    ```
+
+    이렇게 해주면 strStrStrm에 마치 new String[]{"abc","def","ghi","ABC","DEF","GHI"} 넣은것처럼 된다.
+
