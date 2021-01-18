@@ -179,4 +179,60 @@ int total = stream.count(); // 요소 개수 세기 (반환값이 Stream이 아�
 
     따라서 generate()는 초기값(seed)가 필요하지 않다.
 
-- 
+- 파일을 소스로 하는 스트림 생성하기
+
+  ``` java
+  Stream<Path> Files.list(Path dir) // Path는 파일 또는 디렉토리
+  ```
+
+  ``` java
+  Stream<String> Files.lines(Path path) // 파일 내용을 라인 단위로 읽어서 String으로 만듦
+  Stream<String> Files.lines(Path path, Charset cs)
+  Stream<String> lines() // BufferedReader클래스의 메소드
+  ```
+
+- 비어있는 스트림 생성하기
+
+  ``` java
+  Stream emptyStream = Stream.empty(); // empty()는 빈 스트림을 생성해서 반환함.
+  long count = emptyStream.count(); // count의 값은 0이 나옴
+  ```
+
+  
+
+## 스트림의 중간연산
+
+- 스트림 자르기 -skip(), limit()
+
+  ``` java
+  Stream<T> skip(ling n) // 앞에서부터 n개 건너뛰기
+  Stream<T> limit(long maxSize) // maxSize 이후의 요소는 잘라냄
+  
+  ```
+
+- 스트림의 요소 걸러내기 -filter(), distinct()
+
+  ``` java
+  Stream<T> filter(Predicate<? super T> predicate) // 조건에 맞지 않는 요소 제거
+  Stream<T> distinct() // 중복제거
+  ```
+
+- 스트림 정렬하기 -sorted()
+
+  ``` java
+  Stream<T> sorted() // 스트림 요소의 기본 정렬(Comparable)로 정렬
+  Stream<T> sorted(Comparator<? super T> comparator) // 지정된 Comparator로 정렬
+  ```
+
+  **ex) 문자열의 경우**
+
+  ``` java
+  strStream.sorted(); // 기본정렬
+  strStream.sorted(Comparator.natualOrder()); // 기본 정렬
+  strStream.sorted((s1, s2) -> s1.compareTo(s2));
+  strStream.sorted(String::compareTo);
+  strStream.sorted(Comparator.comparing(String::length)) // 길이 순 정렬
+  // 이 밖에 재밌는 기능 많음
+  ```
+
+  
