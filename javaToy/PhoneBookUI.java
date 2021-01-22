@@ -1,330 +1,340 @@
-import java.util.*;
+import java.util.Scanner;
 
 public class PhoneBookUI {
+
 	public static void main(String[] args) {
-		PhoneBook.getInstance().run();
+		PhoneBook.run();
+
 	}
 }
+class PhoneBook implements PhoneBookInterface{
 
-class PhoneBook {
-	private PhoneBook() {
-	}
-
-	private final ArrayList<PhoneInfo> repository = new ArrayList<>(100);
+	private static PhoneBook phoneBook;
+	private static Member[] repository;
+	private static int sequence;
 	private static final Scanner sc = new Scanner(System.in);
 
-	public static MenuChoice inputNum(String option) { // 예외처리 메소드
-
-		try {
-			int num = sc.nextInt();
-			sc.nextLine();
-			if (num < 1)
-				MenuChoice.valueOf(num, option);
-			return MenuChoice.valueOf(num, option);
-		} catch (MenuChoiceException e) {
-			System.out.println(e.getMessage());
-			return MenuChoice.ERROR;
-		} catch (InputMismatchException e) {
-			System.out.println("잘못 입력하셨습니다.");
-			sc.nextLine();
-			return MenuChoice.ERROR;
-		}
+	private PhoneBook(int size) {
+		repository = new Member[size];
 	}
 
-	public void insertSort(PhoneInfo p) { // 삽입정렬
-		if (repository.isEmpty()) {
-			repository.add(p);
-			return;
-		}
-		for (int i = 0; i < repository.size(); i++) {
-			if (p.NAME.compareTo(repository.get(i).NAME) < 0) {
-				repository.add(i, p);
-				return;
+	private static void getInstance() {
+
+		if (phoneBook == null) {
+
+			boolean flag = true;
+			char[] temp = null;
+			int size = 0;
+
+			while (flag) {
+
+				System.out.println("사이즈를 정해주세요");
+				temp = sc.nextLine().trim().toCharArray();
+				if (isNumber(temp)) {
+					flag = false;
+					size = toInteger(temp);
+
+				}
 			}
+
+			phoneBook = new PhoneBook(size);
+
 		}
-		repository.add(p);
 	}
 
-	public void run() {
-		Loop1:
-		while (true) {
-			System.out.print(MenuChoice.PRINT_CHOICE.MESSAGE);
-			MenuChoice choice = inputNum("CHOICE");
-			switch (choice) {
-				case ADD:
-					add();
+	public static void run() {
+
+		getInstance();
+		boolean flag = true;
+
+		while (flag) {
+
+			System.out.println(PRINT_INTERFACE);
+			char[] temp = sc.nextLine().trim().toCharArray();
+
+			if (!isNumber(temp)) {
+
+				continue;
+
+			} else if (temp.length != 1 || temp[0] < '0' || temp[0] > '5') {
+
+				System.out.println("1~5 사이의 숫자만 입력하세요.");
+				continue;
+
+			}
+
+			int select = toInteger(temp);
+			switch (select) {
+
+				case DATA_INPUT :
+					addMember();
 					break;
-				case SEARCH:
-					search();
+				case DATA_SEARCH:
+					searchMember();
 					break;
-				case DELETE:
-					delete();
+				case DATA_DELETE:
+					deleteMember();
 					break;
-				case SHOW_ALL:
+				case SHOW_ALL_DATA:
 					showAll();
 					break;
 				case EXIT:
-					if (exit()) {
-						sc.close();
-						break Loop1;
-					}
+					flag = !isExit();
+					break;
+
 			}
 		}
 	}
 
+	private static int toInteger(char[] arr) {
 
-	private void add() { // 입력
-		System.out.print(MenuChoice.PRINT_ADD.MESSAGE);
-		MenuChoice choice = inputNum("ADD");
-		switch (choice) {
+		StringBuffer sb = new StringBuffer();
+
+		for (char ch : arr) {
+
+			sb.append(ch - '0');
+
+		}
+
+		return Integer.parseInt(sb.toString());
+
+	}
+
+	private static boolean isNumber(char[] arr) {
+		if (arr.length == 0) {
+
+			return false;
+
+		}
+		for (char ch : arr) {
+
+			if (ch < '0' || ch > '9') {
+				System.out.println("숫자만 입력해 주세요");
+				return false;
+			}
+
+		}
+		return true;
+	}
+
+
+	private static void addMember() {
+		if (sequence == repository.length) {
+			System.out.println("저장소가 가득 찼습니다.");
+			return;
+		}
+		System.out.println("1. 일반");
+		System.out.println("2. 대학");
+		System.out.println("3. 회사");
+		char[] checkNum = sc.nextLine().trim().toCharArray();
+		if (!isNumber(checkNum)) {
+			addMember();
+			return;
+		} else if (checkNum.length != 1 || checkNum[0] < '1' || checkNum[0] > '3') {
+			System.out.println("1~3까지의 숫자만 입력해주세요");
+			addMember();
+			return;
+		}
+		int select = checkNum[0]-'0';
+		switch (select) {
 			case GENERAL:
-				insertSort(new PhoneInfo());
+				sort(new Member());
 				break;
 			case UNIV:
-				try { // 예외처리
-					insertSort(new PhoneUnivInfo());
-				} catch (InputMismatchException e) {
-					break;
-				}
+				sort(new UnivMember());
 				break;
-			case COMP:
-				insertSort(new PhoneCompanyInfo());
-				break;
+			case COMPANY:
+				sort(new CompanyMember());
 		}
 	}
 
-	private void search() { // 검색
-		if (repository.isEmpty()) {
-			System.out.println("데이터가 존재하지 않습니다.");
+	private static void sort(Member member) {
+		boolean flag = true;
+		if (sequence == 0) {
+			repository[sequence++] = member;
 			return;
 		}
-		System.out.println("검색을 시작합니다.");
+		for (int i = 0; i < sequence; i++) {
+			if (repository[i].compareTo(member) > 0) {
+				for (int j = sequence; j > i; j--) {
+					repository[j] = repository[j-1];
+				}
+				repository[i] = member;
+				sequence++;
+				flag = false;
+				break;
+			}
+		}
+		if (flag) {
+			repository[sequence++] = member;
+		}
+	}
+
+	private static void searchMember() {
 		System.out.print("이름 : ");
-		String name = sc.nextLine().trim();
+		String name = sc.nextLine();
 		boolean flag = true;
-		for (PhoneInfo p : repository) {
-			if (p.NAME.equals(name)) {
-				System.out.println(p);
+		for (int i = 0; i < sequence; i++) {
+			if (repository[i].NAME.equals(name)) {
+				System.out.println(repository[i] + "\n");
 				flag = false;
 			}
 		}
-		if (flag)
-			System.out.println("해당하는 값이 존재하지 않습니다.");
+		if (flag) {
+			System.out.println("정보가 없습니다.");
+		}
 	}
 
-	private void delete() { // 삭제
-		if (repository.isEmpty()) {
-			System.out.println("데이터가 존재하지 않습니다.");
-			return;
-		}
-		System.out.println("삭제를 시작합니다");
-		System.out.print("전화번호 : ");
-		String phoneNumber = sc.nextLine();
-		for (PhoneInfo p1 : repository) {
-			if (p1.PHONE_NUMBER.equals(phoneNumber)) {
-				System.out.print("정말 삭제하시겠습니까? 삭제: Y, 취소 N\n" +
-						">> ");
-				String select = sc.nextLine().trim().toUpperCase();
-				switch (select) {
-					case "Y":
-						repository.remove(p1);
-						System.out.println("삭제 완료");
-						return;
-					case "N":
-						System.out.println("처음으로 돌아갑니다.");
-						return;
-					default:
-						System.out.println("잘못 입력하셨습니다.\n" +
-								"처음으로 돌아갑니다.");
-						return;
+	private static void deleteMember() {
+		System.out.println("전화번호 : ");
+		String PHONE_NUMBER = sc.nextLine();
+		boolean flag = true;
+		for (int i = 0; i < sequence; i++) {
+			if (repository[i].PHONE_NUMBER.equals(PHONE_NUMBER)) {
+				System.out.println("정말 삭제하시겠습니까?  Y 삭제, N 처음으로");
+				String str = sc.nextLine().toUpperCase().trim();
+				if (str.equals(YES)) {
+					for (int j = i; j < sequence-1; j++) {
+						repository[j] = repository[j+1];
+					}
+					sequence--;
+					flag = false;
+					break;
+				} else if (str.equals(NO)){
+					System.out.println("처음으로 돌아갑니다.");
+					flag = false;
+					break;
+				} else {
+					System.out.println("잘못 입력하셨습니다.");
+					i--;
 				}
 			}
 		}
-		System.out.println("정보가 없습니다.");
-	}
-
-	private void showAll() { // 모든 결과
-		if (repository.isEmpty()) {
-			System.out.println("데이터가 존재하지 않습니다.");
-			return;
+		if (flag) {
+			System.out.println("정보가 없습니다.");
 		}
-		repository.forEach(System.out::println);
 	}
 
-	private boolean exit() { // 종료
-		System.out.print("종료 하시겠습니까? 종료: Y, 취소: N\n" +
-				">> ");
-		String select = sc.nextLine().trim().toUpperCase();
-		switch (select) {
-			case "Y":
+	private static void showAll() {
+		if (sequence == 0) {
+			System.out.println("정보가 없습니다.");
+		}
+		for (int i = 0; i < sequence; i++) {
+			System.out.println(i);
+			System.out.println(repository[i]);
+			System.out.println();
+		}
+	}
+
+	private static boolean isExit() {
+		while (true) {
+			System.out.println("종료하시겠습니까? Y 종료, N 처음으로");
+			String str = sc.nextLine().trim().toUpperCase();
+			if (str.equals(YES)) {
 				System.out.println("종료합니다.");
 				return true;
-			case "N":
-				System.out.println("처음으로 돌아갑니다.");
+			} else if (str.equals(NO)) {
 				return false;
-			default:
-				System.out.println("잘못 입력하셨습니다.\n" +
-						"처음으로 돌아갑니다.");
-				return false;
-		}
-	}
-
-	private static class Singleton {
-		private static final PhoneBook singleton = new PhoneBook();
-	}
-
-	public static PhoneBook getInstance() {
-		return Singleton.singleton;
-	}
-
-	private class PhoneInfo {
-		final String NAME;
-		final String PHONE_NUMBER;
-
-		PhoneInfo(String NAME, String PHONE_NUMBER) {
-			this.NAME = NAME;
-			this.PHONE_NUMBER = PHONE_NUMBER;
-		}
-
-		PhoneInfo() {
-			System.out.print("이름 : ");
-			this.NAME = sc.nextLine();
-			System.out.print("전화번호 : ");
-			this.PHONE_NUMBER = sc.nextLine();
-		}
-
-		@Override
-		public String toString() {
-			return String.format("\n" +
-							"이름 : %s\n" +
-							"전화번호 : %s",
-					NAME, PHONE_NUMBER
-			);
-		}
-	}
-
-	private class PhoneUnivInfo extends PhoneInfo {
-		final String MAJOR;
-		final int YEAR;
-
-		PhoneUnivInfo(String NAME, String PHONE_NUMBER, String MAJOR, int YEAR) {
-			super(NAME, PHONE_NUMBER);
-			this.MAJOR = MAJOR;
-			this.YEAR = YEAR;
-		}
-
-		PhoneUnivInfo() {
-			System.out.print("전공 : ");
-			this.MAJOR = sc.nextLine();
-			try {
-				System.out.print("학년 : ");
-				this.YEAR = sc.nextInt();
-				sc.nextLine();
-			} catch (InputMismatchException e) {
+			} else {
 				System.out.println("잘못 입력하셨습니다.");
-				throw new InputMismatchException();
 			}
 		}
+	}
+
+	private static class Member implements Comparable<Member>{
+		private final String NAME;
+		private final String PHONE_NUMBER;
+		private final String BIRTH;
+		private static final Scanner sc = new Scanner(System.in);
+		Member() {
+			System.out.print("이름 : ");
+			NAME = sc.nextLine();
+			System.out.print("전화번호 : ");
+			PHONE_NUMBER = sc.nextLine();
+			System.out.print("생일 : ");
+			BIRTH = sc.nextLine();
+		}
+		@Override
+		public String toString() {
+			return  "이름 : " + NAME +
+					"\n전화번호 : " + PHONE_NUMBER +
+					"\n생년월일 : " + BIRTH;
+
+		}
+
+		@Override
+		public int compareTo(Member member) {
+				return this.NAME.compareTo(member.NAME);
+		}
+
+	}
+
+	private static class UnivMember extends PhoneBook.Member {
+		private final int YEAR;
+
+		UnivMember() {
+			super();
+			boolean flag = true;
+			char[] arr = null;
+			while (flag) {
+				System.out.print("학년 : ");
+				arr = sc.nextLine().trim().toCharArray();
+				if (isNumber(arr)) flag = false;
+			}
+			YEAR = toInteger(arr);
+
+		}
 
 		@Override
 		public String toString() {
-			return super.toString() + String.format("\n" +
-					"전공 : %s\n" +
-					"학년 : %d",
-					MAJOR, YEAR
-			);
+			return  super.toString() +
+					"\n학년 : " + YEAR;
 		}
+
 	}
 
-	private class PhoneCompanyInfo extends PhoneInfo {
-		final String COMPANY;
+	private static class CompanyMember extends PhoneBook.Member {
+		private final String COMPANY;
 
-		PhoneCompanyInfo(String NAME, String PHONE_NUMBER, String COMPANY) {
-			super(NAME, PHONE_NUMBER);
-			this.COMPANY = COMPANY;
-		}
-
-		PhoneCompanyInfo() {
+		CompanyMember() {
+			super();
 			System.out.print("회사 : ");
-			this.COMPANY = sc.nextLine();
+			COMPANY = sc.nextLine();
 		}
+
 		@Override
 		public String toString() {
-			return super.toString() + String.format(
-					"\n회사 : %s",COMPANY
-			);
+			return  super.toString() +
+					"\n직장 : " + COMPANY;
 		}
+
+
 	}
 
-	private enum MenuChoice {
-		PRINT_CHOICE("\n" +
-				"선택하세요...\n" +
-				"1. 데이터 입력\n" +
-				"2. 데이터 검색\n" +
-				"3. 데이터 삭제\n" +
-				"4. 모든 데이터 보기\n" +
-				"5. 프로그램 종료\n" +
-				"선택 : "
-		),
-		PRINT_ADD("\n" +
-				"데이터 입력을 시작합니다\n" +
-				"1. 일반, 2. 대학, 3. 회사\n" +
-				"선택 >> "
-		),
-
-		ADD("CHOICE", 1),
-		SEARCH("CHOICE", 2),
-		DELETE("CHOICE", 3),
-		SHOW_ALL("CHOICE", 4),
-		EXIT("CHOICE", 5),
-
-		GENERAL("ADD", 1),
-		UNIV("ADD", 2),
-		COMP("ADD", 3),
-
-		ERROR("ERROR");
-
-		private final int NUM;
-		private final String MESSAGE;
-
-		MenuChoice(String MESSAGE, int NUM) {
-			this.MESSAGE = MESSAGE;
-			this.NUM = NUM;
-		}
-
-		MenuChoice(int NUM) {
-			this("", NUM);
-		}
-
-		MenuChoice(String MESSAGE) {
-			this(MESSAGE, -1);
-		}
-
-		private static MenuChoice valueOf(int num, String option) { // enum 예외처리 
-			return Arrays.stream(MenuChoice.values())
-					.filter(x -> x.NUM == num)
-					.filter(x -> x.MESSAGE.equals(option))
-					.findAny()
-					.orElseThrow(() -> new MenuChoiceException(num));
-		}
-
-	}
 }
 
-class MenuChoiceException extends RuntimeException { // 예외처리 클래스
-	private final int ERR_NUM;
+interface PhoneBookInterface {
+	int DATA_INPUT = 1;
+	int DATA_SEARCH = 2;
+	int DATA_DELETE = 3;
+	int SHOW_ALL_DATA = 4;
+	int EXIT = 5;
 
-	MenuChoiceException(String Message, int ERR_NUM) {
-		super(Message);
-		this.ERR_NUM = ERR_NUM;
-	}
+	int GENERAL = 1;
+	int UNIV = 2;
+	int COMPANY = 3;
 
-	MenuChoiceException(int ERR_NUM) {
-		this("에 해당하는 선택은 존재하지 않습니다.", ERR_NUM);
-	}
+	String YES = "Y";
+	String NO = "N";
 
-	@Override
-	public String getMessage() {
-		return ERR_NUM + super.getMessage();
-	}
+	String PRINT_INTERFACE = "1. 데이터 입력" +
+			"\n2. 데이터 검색" +
+			"\n3. 데이터 삭제" +
+			"\n4. 모든 데이터 보기" +
+			"\n5. 프로그램 종료";
 }
+
+
+
+
+
