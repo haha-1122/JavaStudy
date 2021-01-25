@@ -438,3 +438,330 @@ int total = stream.count(); // 요소 개수 세기 (반환값이 Stream이 아�
 
     이렇게 해주면 strStrStrm에 마치 new String[]{"abc","def","ghi","ABC","DEF","GHI"} 넣은것처럼 된다.
 
+
+
+
+
+## 스트림의 최종연산
+
+-   void forEach()
+
+-   조건 검사
+
+    ``` java
+    boolean allMatch(Predicate<? super T> predicate);
+    boolean anyMatch(Predicate<? super T> predicate);
+    boolean noneMatch(Predicate<? super T> predicate);
+    ```
+
+-   Optional findAny(), findFirst()
+
+    병렬일 경우 Any, 아닌경우 First
+
+-   통계
+
+    ``` java
+    long count();
+    Optional<T> max(Comparator<? super T> comparator);
+    Optional<T> min(Comparator<? super T> comparator);
+    ```
+
+-   리듀싱
+
+    ``` java
+    // 스트림의 요소를 줄여가면서 연산해 최종 결과를 반환하는 것 따라서 매개변수 타입이 BinaryOperator<T>
+    // 처음 두 요소를 가지고 연산하고, 그 연산결과를 다음 요소와 연산한다.
+    Optional<T> reduce(BinaryOperator<T> accumulator);
+    T reduce(T identity, BinaryOperator<T> accumulator); // 초기값과 스트림의 처음 요소를 가지고 reduce시작
+    // 만약 스트림의 요소가 하나도 없는 경우엔 T를 반환한다. 반환값이 Optional<T>가 아닌 이유는 애초에 초기값으로 절대 null이 나올 수 없는 구조이기 때문
+    U reduce(U identity, BiFunction<U,T,U> accumulator, BinaryOperator<U> combiner); // 병렬 스트림에서 사용
+    
+    // count와 sum, max, min 도 reduce를 이용해 작성되었다.
+    // intStream은 Stream<Integer>를 나타냄
+    int count() = intStream.reduce(0, (a,b) -> a+1);
+    int sum() = intStream.reduce(0, (a,b) -> a + b);
+    int max() = intStream.reduce(Integer.MIN_VALUE, (a,b) -> a>b ? a:b);
+    int min() = intSTream.reduce(Integer.MAX_VALUE, (a,b) -> a<b ? a:b);
+    ```
+
+-   collect()
+
+    스트림의 요소를 수집하는 방법으로, reducing 과 유사하다. 어떻게 수집할 것인가에 대한 방법이 정의되어 있어야 하는데, 이 방법을 정의한 것이 바로 컬렉터이다.
+
+    컬렉터는 Collector 인터페이스를 구현한 것으로, 직접 구현할 수도 있고 미리 작성된 것을 사용할 수도 있다. Collectors가 미리 작성된 다양한 종류의 컬렉터를 반환하는 static 메소드를 가지고 있다
+
+    Collector : 컬렉터 인터페이스. collect() 메소드의 파라미터로, 이 인터페이스를 구현해야 사용 가능
+
+    Collectors : 컬렉터 클래스. static 메소드로 미리 작성된 컬렉터 제공
+
+    ``` java
+    Object collect(Collector collector); // Collector를 구현한 클래스의 객체를 매개변수로
+    Object collect(Supplier supplier, BiConsumer accumulator, BiConsumer combiner);
+    ```
+
+    아래의 메소드 처럼 매개변수가 3개있는 메소드는 잘 사용하지 않지만, Collector 인터페이스를 구현하지 않고, 간단히 람다로 수집할 때 사용하기 편하다.
+
+    
+
+    
+### 스트림을 컬렉션과 배열로 변환
+
+---
+
+#### toList(), toSet(), toMap(), toCollection(), toArray()
+
+``` java
+List<String> names = stuStream.map(Student::getName)
+    .collect(Collectors.toList()); // Stream<Student>를 <String>map으로 중간연산해서 그걸 collect 최종연산으로 toList()를 이용해 List<String>으로 반환
+    ArrayList<String> list = names.stream()
+        .collect(Collectors.toCollection(ArrayList::new)); // List나 Set이 아닌 특정 컬렉션을 지정하려면, toCollection()에 해당 컬렉션의 생성자 참조를 매개변수를 통해 넣어주면 된다.
+    
+    
+    Map<String, Person> map = personStream
+        .collect(Collectors.toMap(p -> p.getRegId(), p->p)); // Stream<Person>을 map으로 만들기 위해 key값을 Person.getRegId() 즉 주민등록번호로 하고, value를 객체 자체를 넣어서 map으로 반환
+    //p -> p 대신 Function.identity(항등함수)를 사용해도 좋다.
+    
+    Student[] stuNames = studentStream.toArray(Student[]::new); // T[]타입의 배열로 변환하기 위해 toArray를 사용한다. 해당 타입의 생성자 참조를 매개변수로 지정해 주어야 한다. 지정해 주지 않으면 Object로 반환
+    
+    Student[] stuNames = studentStream.toArray(); // Error
+    Object[] stuNames = studentStream.toArray(); // OK
+```
+
+
+
+### 통계
+
+---
+
+#### counting(), summingInt(), averagingInt(), maxBy(), minBy()
+
+``` java
+long count = stuStream.count();
+long count = stuStream.collect(Collectors.counting());
+
+long totalScore = studentStream.mapToLong(Student::getTotalScore).sum();
+long totalScore = studentStream.collect(Collectors.summingLong(Student::getTotalScore));
+
+OptionalInt topScore = studentStream.mapToInt(Student::getTotalScore).max();
+Optional<Student> topStudent = studentStream
+    .max(Comparator.comparingInt(Student::getTotalScore));
+Optional<Student> topStudent = studentStream
+    .collect(maxBy(Comparator.comparingInt(Student::getTotalScore)));
+
+IntSummaryStatistics stat = stuSteram
+    .mapToInt(Student::getTotalScore)
+    .summaryStatistics(); // SummaryStatistics = 통계 요약
+IntSummaryStatistics stat = stuStream
+    .collect(summarizingInt(Student::getTotalScore));
+```
+
+
+
+### reducing()
+
+---
+
+리듀싱 역시 collect()로 가능하다. IntStream에는 매개변수가 3개짜리인 collect()만 정의되어 있으므로 boxed()를 통해 IntStream을 Stream<Integer>로 변환해야 매개변수가 1개인 collect() 메소드를 사용할 수 있다.
+
+``` java
+IntStream intStream = new Random().ints(1,46).distinct().limit(6);
+
+OptionalInt max = intStream.reduce(Integer::max);
+Optional<Integer> max = intStream.boxed().collect(Collectors.reducing(Integer::max));
+
+long sum = intStream.reduce(0, (a,b) -> a + b);
+long sum = intStream.boxed().collect(Collectors.reducing(Integer::max));
+```
+
+Collectors.reducing()엔 아래와 같이 3가지 종류가 있다. 세 번째 메소드만 제외하고 reduce()와 같다. 세 번째 것은 위의 예에서 알 수 있듯 map과 reduce()를 합쳐놓은 것이다.
+
+``` java
+Collector reducing(BinaryOperator<T> op);
+Collector reducing(T identity, BinaryOperator<T> op);
+Collector reducing(U identity, Function<T,U> mapper, BinaryOperator<U> op);
+```
+
+#### joining()
+
+---
+
+문자열 스트림의 모든 요소를 하나의 문자열로 join해서 반환한다. 구분자와 접두사, 접미사를 지정해줄 수 있다.
+
+스트림의 요소가 String이나 StringBuffer처럼 CharSequence의 자손인 경우에만 결합이 가능하다
+
+``` java
+String studentNames = stuSteram.map(Student::getName).collector(Collectors.joining(",","{"."}"));
+```
+
+만일 map()을 사용하지 않고 객체 그대로 joining 한다면, toString()을 가지고 연산한다.
+
+
+
+
+
+## 그룹화와 분할
+
+그룹화는 스트림의 요소를 특정 기준으로 그룹화하는 것을 의미하고, 분할은 스트림의 요소를 두 가지, 지정된 조건에 일치하는 그룹과 일치하지 않는 그룹으로의 분할을 의미한다. groupingBy()는 스트림의 요소를 Fumction으로, partitioningBy()는 Predicate로 분류한다.
+
+``` java
+Collector groupingBy(Function classifier);
+Collector groupingBy(Function classifier, Collector downstream);
+Collector groupingBy(Function classifier, Supplier mapFactory, Collector downstream);
+
+Collector partitioningBy(Predicate predicate);
+Collector partitioningBy(Predicate predicate, Collector downstream);
+```
+
+
+
+groupingBy()와 partitioningBy는 분류를 Function으로 하냐 Predicate로 하냐의 차이만 있을 뿐 동일하다. 스트림을 두 개의 그룹으로 나눠야 한다면 당연히 partitioningBy()로 분할하는 것이 더 빠르다.
+
+또한 그룹화와 분할의 결과는 Map에 담겨 반환된다.
+
+
+
+-   #### partitioningBy()
+
+``` java
+Map<Boolean, List<Student>> stuBySex = stuStream
+    .collect(Collectors.partitioningBy(Student::isMale)); // isMale을 통해 Map에 분류함.
+    
+   
+    
+
+Map<Boolean, Long> stuBySex = stuStream
+    .collect(Collectors.partitioningBy(Student::isMale,Collectors.counting())); // Value에 Student 객체를 넣는게 아니라 counting()을 통해 남녀의 수를 나타냄
+Map<Boolean, Optional<Student> stuBySex = stuStream
+    .collect(Collectors.partitioningBy(Student::isMale, Collectors.maxBy(Student::compareTo)));
+
+// Optional로 얻고싶지 않은 경우
+Map<Boolean, Student> stuBySex = stuStream
+    .collect(Collectors.partitioningBy(Student::isMale,
+                                       Collectors.collectingAndThen(
+                                       		maxBy(comparingInt(Students::getScore)),
+                                            Optional::get      
+                                       )
+                        )
+     )); // 이렇게 collectingAndThen()을 사용하면 된다.
+
+//이중 partitioningBy
+Map<Boolean, Map<Boolean, List<Student>>> failedStuBySex = stuStream
+    .collect(
+		Collectors.partitioningBy(Student::isMale,
+                                  Collectors.partitioningBy(s -> s.getScore() < 150)
+                                  )
+); // 이렇게 이중분할을 사용할 수도 있다.
+```
+
+
+
+
+
+-   #### groupingBy()
+
+    groupingBy()는 기본적으로 Collectors.toList()를 생략해 준다.
+
+    ``` java
+    Map<Integer, List<Student>> stuByBan = stuStream
+        .collect(groupingBy(Student::getBan));
+    
+    Map<Integer, List<Student>> stuByBan = stuStream
+        .collect(groupingBy(Student::getBan, toList))
+    ```
+
+    다른 Collection을 사용하고 싶다면 적절히 Map도 바꿔서 쓰면 된다. ( *toCollection()* )
+
+    ``` java
+    Map<Integer, HashSet<Student>> stuByBan = stuStream
+        .collect(groupingBy(Student::getBan, Collectors.toCollection(HashSet::new)));
+    ```
+
+    좀 더 복잡하게 만들면
+
+    ``` java
+    Map<Student.Level, Long> stuByLevel = stuStream // Level은 Student의 enum이라고 생각하면 된다.
+        .collect(Collectors.groupingBy(s -> {
+            if(s.getScore >= 200) 			return Student.Level.HIGH;
+            else if(s.getScore >= 100) 		return Student.Level.MEDIUM;
+            else 							return Student.Level.LOW;
+        }, 
+            Collectors.counting()));
+    ```
+
+    중복해서 쓸 수도 있다.
+
+    ``` java
+    // 학년, 반 별로 저장
+    Map<Integer, Map<Integer, List<Student>>> stuByHakAndBan = stuStream
+        .collect(Collectors.groupingBy(Student::getHak,
+                                      Collectors.groupingBy(Student::getBan)));
+    // 학년, 반 별로 각 반의 1등
+    Map<Integer, Map<Integer, Student>> topStuByHakAndBan = stuStream
+        .collect(Collectors.groupingBy(Student::getHak,
+         	Collectors.groupingBy(Student::getBan, Collectors.collectingAndThen(
+            	Collectors.maxBy(Collectors.comparingInt(Student::getScore)),
+            		Optional::get))));
+    
+    //헉년, 반별로 그룹화 한 후 성적그룹으로 변환
+    Map<Integer, Map<Integer, Set<Student.Level>>> stuByHakAndBan = stuStream
+        .collect(
+    		Collectors.groupingBy(Student::getHak,
+    			Collectors.groupingBy(Student::getBan,
+    				Collectors.mapping(s-> {
+                        if(s.getScore() >= 200)			return Student.Level.HIGH;
+                        else if(s.getScore() >= 100)	return Student.Level.MEDIUM;
+                        else							return Student.Level.LOW;
+                    }, toSet())));
+    ```
+
+
+
+
+
+
+
+## Collector구현
+
+Collector 인터페이스는 다음과 같이 정의되어 있다.
+
+``` java
+public interface Collector<T, A, R> {
+    Supplier<A>				supplier();
+    BiConsumer<A, T> 		accumulator();
+    BinaryOperator<A>		combiner();
+    Function<A, R>			finisher();
+    
+    Set<Characteristics>	characteristics(); // 컬렉터의 특성이 담긴 Set을 반환
+    ...
+}
+```
+
+직접 구현해야 하는 것은 위의 5개의 메소드이며, characteristics()를 제외하면 모두 반환타입이 함수형 인터페이스이다.(람다)
+
+``` java
+supplier();		// 작업결과를 저장할 공간을 제공
+accumulator();	// 스트림의 요소를 수집할 방법을 제공
+combiner();		// 두 저장공간을 병합할 방법을 제공(병렬 스트림)
+finisher();		// 결과를 최종적으로 변환할 방법을 제공
+```
+
+characteristics()는 컬렉터가 수행하는 작업의 속성에 대한 정보를 제공하기 위한 것이다.
+
+``` java
+Characteristics.CONCURRENT; 		// 병렬로 처리할 수 있는 작업
+Characteristics.UNORDERED;			// 스트림의 요소의 순서가 유지될 필요가 없는 작업
+Characteristics.IDENTITY_FINISH		// finisher()가 Function.identity() 즉, 항등함수인 작업
+```
+
+``` java
+public Set<Characteristics> characteristics() { 			// 이렇게 속성을 지정해 주면 된다.
+    return Collections.unmodifiableSet(EnumSet.of(
+    	Collector.Characteristics.CONCURRENT,
+    	Collector.Characteristics.UNORDERED));
+}
+
+public Set<Characteristics> characteristics() {
+    return Collections.emptySet();							// 지정할 특성이 없는 경우 비어있는 Set을 반환
+}
+```
+
