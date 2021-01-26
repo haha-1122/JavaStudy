@@ -682,8 +682,8 @@ Map<Boolean, Map<Boolean, List<Student>>> failedStuBySex = stuStream
     Map<Student.Level, Long> stuByLevel = stuStream // Level은 Student의 enum이라고 생각하면 된다.
         .collect(Collectors.groupingBy(s -> {
             if(s.getScore >= 200) 			return Student.Level.HIGH;
-            else if(s.getScore >= 100) 		return Student.Level.MEDIUM;
-            else 							return Student.Level.LOW;
+            else if(s.getScore >= 100) 			return Student.Level.MEDIUM;
+            else 					return Student.Level.LOW;
         }, 
             Collectors.counting()));
     ```
@@ -709,8 +709,8 @@ Map<Boolean, Map<Boolean, List<Student>>> failedStuBySex = stuStream
     			Collectors.groupingBy(Student::getBan,
     				Collectors.mapping(s-> {
                         if(s.getScore() >= 200)			return Student.Level.HIGH;
-                        else if(s.getScore() >= 100)	return Student.Level.MEDIUM;
-                        else							return Student.Level.LOW;
+                        else if(s.getScore() >= 100)		return Student.Level.MEDIUM;
+                        else					return Student.Level.LOW;
                     }, toSet())));
     ```
 
@@ -727,11 +727,11 @@ Collector 인터페이스는 다음과 같이 정의되어 있다.
 ``` java
 public interface Collector<T, A, R> {
     Supplier<A>				supplier();
-    BiConsumer<A, T> 		accumulator();
-    BinaryOperator<A>		combiner();
+    BiConsumer<A, T> 			accumulator();
+    BinaryOperator<A>			combiner();
     Function<A, R>			finisher();
     
-    Set<Characteristics>	characteristics(); // 컬렉터의 특성이 담긴 Set을 반환
+    Set<Characteristics>		characteristics(); // 컬렉터의 특성이 담긴 Set을 반환
     ...
 }
 ```
@@ -740,7 +740,7 @@ public interface Collector<T, A, R> {
 
 ``` java
 supplier();		// 작업결과를 저장할 공간을 제공
-accumulator();	// 스트림의 요소를 수집할 방법을 제공
+accumulator();		// 스트림의 요소를 수집할 방법을 제공
 combiner();		// 두 저장공간을 병합할 방법을 제공(병렬 스트림)
 finisher();		// 결과를 최종적으로 변환할 방법을 제공
 ```
@@ -749,7 +749,7 @@ characteristics()는 컬렉터가 수행하는 작업의 속성에 대한 정보
 
 ``` java
 Characteristics.CONCURRENT; 		// 병렬로 처리할 수 있는 작업
-Characteristics.UNORDERED;			// 스트림의 요소의 순서가 유지될 필요가 없는 작업
+Characteristics.UNORDERED;		// 스트림의 요소의 순서가 유지될 필요가 없는 작업
 Characteristics.IDENTITY_FINISH		// finisher()가 Function.identity() 즉, 항등함수인 작업
 ```
 
@@ -761,7 +761,7 @@ public Set<Characteristics> characteristics() { 			// 이렇게 속성을 지정
 }
 
 public Set<Characteristics> characteristics() {
-    return Collections.emptySet();							// 지정할 특성이 없는 경우 비어있는 Set을 반환
+    return Collections.emptySet();					// 지정할 특성이 없는 경우 비어있는 Set을 반환
 }
 ```
 
