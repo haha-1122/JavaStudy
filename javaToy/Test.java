@@ -1,14 +1,20 @@
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.IntStream;
 
 class Test {
 	public static void main(String[] args) {
-		run(3);
+		for (int i = 0; i < 10; i++) {
+			run(3);
+		}
+
 	}
 
 	public static ArrayList<Integer> getArr(int i) {
+		long start = System.currentTimeMillis();
+		System.out.println("getting Array...");
 		ArrayList<Integer> list = new ArrayList<>(i * 2);
 		IntStream.generate(() -> 10)
 				.limit(i)
@@ -17,6 +23,7 @@ class Test {
 				.limit(i)
 				.forEach(list::add);
 		Collections.shuffle(list);
+		System.out.println("got array!! : " + (System.currentTimeMillis() - start));
 		return list;
 	}
 
@@ -44,25 +51,24 @@ class Test {
 			}
 			threads[i] = new MyThread(x * i, x * (i + 1));
 		}
+		System.out.println("Timing start!! ------------------");
 		long start = System.currentTimeMillis();
-		for (MyThread t : threads) {
-			System.out.println("Threads Starting");
+		/*for (MyThread t : threads) {
+			System.out.println(t.getName()+" Starting");
 			t.start();
 
 		}
 		for (MyThread t : threads) {
 			try {
 				t.join();
-			} catch (InterruptedException e) {
-
-			}
+			} catch (InterruptedException e) {}
 			System.out.println(t.getName() + " : joining end");
 		}
 		for (MyThread t : threads) {
 			sum += t.getCount();
-		}
+		}*/
 
-		/*sum = Arrays.stream(threads)
+		sum = Arrays.stream(threads)
 				.parallel()
 				.peek(t -> {
 					t.start();
@@ -73,9 +79,9 @@ class Test {
 						t.join();
 						System.out.println(t.getName() + " : joining end");
 					} catch (InterruptedException ignored) {}
-				}).mapToInt(MyThread::getCount).sum();*/
+				}).mapToInt(MyThread::getCount).sum();
 
-		System.out.println("time : " + (System.currentTimeMillis() - start));
+		System.out.println("time : " + (System.currentTimeMillis() - start) + "----------------------");
 		return sum;
 	}
 
@@ -83,14 +89,15 @@ class Test {
 }
 
 class MyThread extends Thread {
+
 	int x;
 	int y;
 	int count;
 
 	MyThread(int x, int y) {
-		System.out.println(this.getName() + " is initialized");
 		this.x = x;
 		this.y = y;
+		System.out.println(this.getName() + " is initialized");
 	}
 
 	@Override
